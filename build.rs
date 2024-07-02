@@ -7,7 +7,7 @@ const GGML_HEADER_SOURCE: &str = "ggml/include";
 
 fn bindgen() {
     // include main ggml header file
-    let ggml_header_path = PathBuf::from(GGML_HEADER_SOURCE).join("ggml.h");
+    let ggml_c_api = PathBuf::from(GGML_HEADER_SOURCE).join("ggml.h");
 
     let mut api = bindgen::Builder::default()
         .derive_copy(true)
@@ -21,7 +21,7 @@ fn bindgen() {
         .merge_extern_blocks(true)
         .enable_function_attribute_detection()
         .sort_semantically(true)
-        .header(ggml_header_path.to_string_lossy())
+        .header(ggml_c_api.to_string_lossy())
         // Suppress some warnings
         .raw_line("#![allow(non_upper_case_globals)]")
         .raw_line("#![allow(non_camel_case_types)]")
@@ -29,7 +29,7 @@ fn bindgen() {
         .raw_line("#![allow(unused)]")
         .raw_line("pub const GGMLSYS_VERSION: Option<&str> = option_env!(\"CARGO_PKG_VERSION\");")
         // Do not generate code for ggml's includes (stdlib)
-        .allowlist_file(ggml_header_path.to_string_lossy());
+        .allowlist_file(ggml_c_api.to_string_lossy());
 
     if cfg!(feature = "cmake") {
         if cfg!(feature = "cuda") {
@@ -189,6 +189,7 @@ fn build() {
     // } else if cfg!(feature = "openblas") {
     //     println!("cargo:rustc-link-lib=openblas");
     // }
+    // TODO: verify this process
     if target_os == "macos" {
         if cfg!(not(feature = "no_accelerate")) {
             println!("cargo:rustc-link-lib=framework=Accelerate");
@@ -201,7 +202,10 @@ fn build() {
         }
     }
     println!("cargo:rustc-link-search=native={}/build", dst.display());
+    // for ggml dynamic library
+    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=ggml");
+    // TODO: fix static linkage
     // println!("cargo:rustc-link-lib=static=ggml_static");
 }
 
